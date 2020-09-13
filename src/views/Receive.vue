@@ -1,6 +1,5 @@
 <template>
   <h1>房间号: {{roomId}} 接收端</h1>
-  <button @click="joinRoom(roomId)">加入房间</button>
   <button @click="sendMessage">发消息</button>
   <input type="file" @change="tirggerFile($event)">
 </template>
@@ -23,7 +22,7 @@ export default {
       try {
         await socket.invoke("JoinRoom", roomId)
       } catch (error) {
-        console.error(err.toString());
+        console.error(error.toString());
       }
     };
 
@@ -75,7 +74,8 @@ export default {
         }
     }
 
-    onMounted(() => {
+    onMounted( async () => {
+      await joinRoom(roomId.value);
       eventBus.on("onJoinedRoom", onJoinedRoom);
       eventBus.on("onSignalingMessage", onSignalingMessage);
       peer.on("onReceiveMessage", onReceiveMessage);

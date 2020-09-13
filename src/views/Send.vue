@@ -26,7 +26,7 @@ export default {
 
     const onChannelOpen = ()=> {
         isWaiting.value = false;
-        router.push(`/s/${roomId}`);
+        router.push(`/s/${roomId.value}`);
     }
 
     // 信令服务器交换信息
@@ -35,10 +35,10 @@ export default {
     };
 
     // 房间创建成功后 打开数据通道 等待连接
-    const onCreatedRoom = (roomId) => {
-      peer.connectPeer(roomId, false);
-      roomId.value = roomId;
+    const onCreatedRoom = (rid) => {
+      roomId.value = rid;
       isWaiting.value = true;
+      peer.connectPeer(rid, false);
     };
 
     onMounted(() => {
