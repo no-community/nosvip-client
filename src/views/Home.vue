@@ -32,14 +32,12 @@ export default {
     const receivingFileId = ref(0);
     const receivingBuffer = ref([]);
 
-    const createRoom = () => {
-      socket.invoke("CreateRoom").catch(function (err) {
-        return console.error(err.toString());
-      });
-    };
-
-    const sendMessage = () => {
-      peer.sendData();
+    const createRoom = async () => {
+      try {
+        await socket.invoke("CreateRoom")
+      } catch (error) {
+        console.error(err.toString());
+      }
     };
 
     const onReceiveMessage = (data) => {

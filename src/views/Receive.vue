@@ -19,10 +19,12 @@ export default {
     const roomId = computed(() => route.params.rid);
     const message = ref("");
 
-    const joinRoom = (roomId) => {
-      socket.invoke("JoinRoom", roomId).catch(function (err) {
-        return console.error(err.toString());
-      });
+    const joinRoom = async (roomId) => {
+      try {
+        await socket.invoke("JoinRoom", roomId)
+      } catch (error) {
+        console.error(err.toString());
+      }
     };
 
     const sendMessage = () => {
