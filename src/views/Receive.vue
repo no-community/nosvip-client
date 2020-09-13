@@ -10,7 +10,7 @@ import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import socket from "../utils/WebSocketManager";
 import eventBus from "../utils/EventBus";
-import { Peer } from "../utils/Peer";
+import peer from "../utils/Peer";
 import FileChunker from "../utils/FileChunker";
 
 export default {

@@ -21,14 +21,13 @@ import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import socket from "../utils/WebSocketManager";
 import eventBus from "../utils/EventBus";
-import { Peer } from "../utils/Peer";
+import peer from "../utils/Peer";
 
 export default {
   setup() {
     const router = useRouter();
     const sendFileList = ref([]);
     const receiveFileList = ref([]);
-    const peer = new Peer();
 
     const receivingFileId = ref(0);
     const receivingBuffer = ref([]);
