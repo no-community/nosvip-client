@@ -10,7 +10,7 @@ import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import socket from "../utils/WebSocketManager";
 import eventBus from "../utils/EventBus";
-import { Peer } from "../utils/Peer";
+import peer from "../utils/Peer";
 import FileChunker from "../utils/FileChunker";
 
 export default {
@@ -18,12 +18,13 @@ export default {
     const route = useRoute();
     const roomId = computed(() => route.params.rid);
     const message = ref("");
-    const peer = new Peer();
 
-    const joinRoom = (roomId) => {
-      socket.invoke("JoinRoom", roomId).catch(function (err) {
-        return console.error(err.toString());
-      });
+    const joinRoom = async (roomId) => {
+      try {
+        await socket.invoke("JoinRoom", roomId)
+      } catch (error) {
+        console.error(err.toString());
+      }
     };
 
     const sendMessage = () => {

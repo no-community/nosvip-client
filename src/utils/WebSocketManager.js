@@ -2,7 +2,7 @@ import { HubConnectionBuilder, HubConnectionState } from '@microsoft/signalr'
 import eventBus from './EventBus'
 
 const socket = new HubConnectionBuilder()
-    .withUrl("http://localhost:5000/p2p")
+    .withUrl("http://novip.gridea.run/p2p")
     .build();
 
 if (socket.state != HubConnectionState.Connected) {

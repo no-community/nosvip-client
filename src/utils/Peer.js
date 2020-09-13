@@ -7,6 +7,7 @@ const BUF_WAITING_THRESHOLD = 1024 * 1024;
 class Peer extends EventEmitter {
     constructor() {
         super();
+        this.instance = null;
         this.roomId = null;
         this.peerConnection = null;
         this.dataChannel = null;
@@ -138,6 +139,7 @@ class Peer extends EventEmitter {
 
     onChannelOpen(e) {
         console.log('## channel open: ', e);
+        this.emit("onChannelOpen");
         this.dataChannel.onmessage = this.onReceiveMessage;
     }
 
@@ -226,6 +228,16 @@ class Peer extends EventEmitter {
             console.warn(err.toString(), err);
         }
     }
+
+    static getInstance() {
+        if(!this.instance) {
+            this.instance = new Peer();
+        }
+
+        return this.instance;
+    }
 }
 
-export { Peer }
+const peer = Peer.getInstance();
+
+export default peer;

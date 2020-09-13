@@ -7,6 +7,10 @@ const router = createRouter({
     routes: [
         {
             path: '/',
+            component: () => import("../views/Send.vue")
+        },
+        {
+            path: '/s/:rid',
             component: () => import("../views/Home.vue")
         },
         {
