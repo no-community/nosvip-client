@@ -2,7 +2,7 @@
   <h1>房间号: {{roomId}} 接收端</h1>
   <button @click="joinRoom(roomId)">加入房间</button>
   <button @click="sendMessage">发消息</button>
-  <p>{{message}}</p>
+  <input type="file" @change="tirggerFile($event)">
 </template>
 
 <script>
@@ -11,6 +11,7 @@ import { useRoute } from "vue-router";
 import socket from "../utils/WebSocketManager";
 import eventBus from "../utils/EventBus";
 import { Peer } from "../utils/Peer";
+import FileChunker from "../utils/FileChunker";
 
 export default {
   setup() {
@@ -26,7 +27,7 @@ export default {
     };
 
     const sendMessage = () => {
-      peer.sendData();
+      peer.sendJson();
     };
 
     const onJoinedRoom = (roomId) => {
@@ -41,12 +42,44 @@ export default {
       peer.signalingMessageCallback(message);
     };
 
+    const tirggerFile = async (e) => {
+        const chunker = new FileChunker(event.target.files[0]);
+        console.log("开始传输文件...")
+        await peer.sendJson({
+          type: 'TransferStart',
+          fileId: 0,
+        });
+        let done = false;
+        while (!done) {
+          const result = await chunker.getNextChunk();
+          done = result.done;
+          const {
+            chunk,
+            offset,
+          } = result;
+          try {
+            await peer.send(chunk);
+          } catch (err) {
+            console.log('传输错误：' + err);
+            break;
+          }
+        }
+
+        console.log("传输文件完成...")
+        if (done) {
+          await peer.sendJson({
+            type: 'TransferEnd',
+            fileId: 0,
+          });
+        }
+    }
+
     onMounted(() => {
       eventBus.on("onJoinedRoom", onJoinedRoom);
       eventBus.on("onSignalingMessage", onSignalingMessage);
       peer.on("onReceiveMessage", onReceiveMessage);
     });
-    return { roomId, sendMessage, joinRoom, message };
+    return { roomId, sendMessage, joinRoom, message, tirggerFile };
   },
 };
 </script>

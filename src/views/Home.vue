@@ -19,6 +19,9 @@ export default {
     const receiveFileList = ref([]);
     const peer = new Peer();
 
+    const receivingFileId = ref(0);
+    const receivingBuffer = ref([]);
+
     const createRoom = () => {
       socket.invoke("CreateRoom").catch(function (err) {
         return console.error(err.toString());
@@ -29,9 +32,29 @@ export default {
       peer.sendData();
     };
 
-    const onReceiveMessage = (e) => {
-      if (typeof e.data == "string") {
-        receiveFileList.value.push(e.data);
+    const onReceiveMessage = (data) => {
+      if (typeof data == "string") {
+        console.log("接收到文本消息：", data);
+        handleMessage(data);
+      } else {
+        console.log("接收到流数据:", data);
+        receivingBuffer.value.push(data);
+      }
+    };
+
+    const handleMessage = (msgText) => {
+      const message = JSON.parse(msgText);
+      if (message.type === "TransferStart") {
+        receivingFileId.value = message.fileId;
+      } else if (message.type === "TransferEnd") {
+        const fileId = message.fileId;
+        const blob = new Blob(receivingBuffer.value);
+
+        const link = document.createElement("a");
+        link.href = window.URL.createObjectURL(blob);
+        link.download = "test.xls";
+        link.click();
+        window.URL.revokeObjectURL(link.href);
       }
     };
 

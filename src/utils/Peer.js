@@ -10,6 +10,7 @@ class Peer extends EventEmitter {
         this.roomId = null;
         this.peerConnection = null;
         this.dataChannel = null;
+        this.waitingCallback = null;
         this.isCaller = null;
 
         this.sendMessage = this.sendMessage.bind(this);
@@ -22,6 +23,7 @@ class Peer extends EventEmitter {
         this.onChannelOpen = this.onChannelOpen.bind(this);
         this.onChannelClose = this.onChannelClose.bind(this);
         this.onReceiveMessage = this.onReceiveMessage.bind(this);
+        this.onBufferedAmountLow = this.onBufferedAmountLow.bind(this);
     }
 
     // 连接 peer
@@ -109,6 +111,10 @@ class Peer extends EventEmitter {
             if (this.peerConnection) {
                 this.peerConnection.close();
             }
+            if (this.waitingCallback) {
+                this.waitingCallback(new Error('peer disconnected, cannot send'));
+                this.waitingCallback = null;
+            }
             this.emit('disconnected');
         } else if (this.peerConnection.connectionState === 'connected') {
             this.emit('connected');
@@ -127,6 +133,7 @@ class Peer extends EventEmitter {
         dataChannel.onopen = this.onChannelOpen;
         dataChannel.onclose = this.onChannelClose;
         dataChannel.onerror = this.onChannelError;
+        dataChannel.onbufferedamountlow = this.onBufferedAmountLow;
     }
 
     onChannelOpen(e) {
@@ -160,36 +167,48 @@ class Peer extends EventEmitter {
         }
     }
 
-    onReceiveMessage(e) {
-        this.emit("onReceiveMessage", e);
+    onBufferedAmountLow() {
+        if (this.waitingCallback) {
+            this.waitingCallback();
+            this.waitingCallback = null;
+        }
     }
 
-    sendData() {
-        //send file size and file name as comma separated value.
-        this.dataChannel.send("hello world!");
+    onReceiveMessage(e) {
+        this.emit("onReceiveMessage", e.data);
+    }
 
-        // const chunkSize = 16384;
-        // fileReader = new FileReader();
-        // let offset = 0;
-        // fileReader.addEventListener('error', error => console.error('Error reading file:', error));
-        // fileReader.addEventListener('abort', event => console.log('File reading aborted:', event));
-        // fileReader.addEventListener('load', e => {
-        //     console.log('FileRead.onload ', e);
-        //     dataChannel.send(e.target.result);
-        //     offset += e.target.result.byteLength;
-        //     if (offset < file.size) {
-        //         readSlice(offset);
-        //     } else {
-        //         alert(`${file.name} has been sent successfully.`);
-        //         sendFileBtn.disabled = false;
-        //     }
-        // });
-        // const readSlice = o => {
-        //     console.log('readSlice ', o);
-        //     const slice = file.slice(offset, o + chunkSize);
-        //     fileReader.readAsArrayBuffer(slice);
-        // };
-        // readSlice(0);
+    send(data) {
+        return new Promise((resolve, reject) => {
+            if (this.dataChannel.readyState === 'open') {
+                if (this.dataChannel.bufferedAmount >= BUF_WAITING_THRESHOLD) {
+                    this.waitingCallback = (err) => {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            this.dataChannel.send(data);
+                            resolve();
+                        }
+                    };
+                } else {
+                    try {
+                        this.dataChannel.send(data);
+                        resolve();
+                    } catch (e) {
+                        console.error('send error: ', e);
+                        reject(e);
+                    }
+                }
+            } else {
+                const errMsg = 'send but channel is not open, now state is: ' + this.peerConnection.readyState;
+                console.error(errMsg);
+                reject(new Error(errMsg));
+            }
+        });
+    }
+
+    sendJson(obj) {
+        return this.send(JSON.stringify(obj));
     }
 
     sendMessage(message) {
