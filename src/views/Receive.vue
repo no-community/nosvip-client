@@ -18,7 +18,6 @@ export default {
     const route = useRoute();
     const roomId = computed(() => route.params.rid);
     const message = ref("");
-    const peer = new Peer();
 
     const joinRoom = (roomId) => {
       socket.invoke("JoinRoom", roomId).catch(function (err) {
