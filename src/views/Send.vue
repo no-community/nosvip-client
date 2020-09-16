@@ -16,15 +16,25 @@
           <img src="../assets/uoload.png" @click='choseFile' style="width: 40%" />
           <span :class="[isSendStatus?'SSCO':'RSCO']">点击上方按钮进行上传</span>
         </div>
-        <div v-else class="flex_column">
-          <div v-for='(item,i) in receiveFileList'>{{item.name}}</div>
-        </div>
+       
+        <div v-else class="flex_column" style="width: 100%">
+          <div v-for='(item,i) in receiveFileList' class="fileItemBox">
+           <div class='flex flexIC' style="padding:5px 0"> 
+              <img src="../assets/file.png" style="width:15px;"/>
+              <text style="margin-left:5px;color:#1890ff">{{item.name}}</text>
+               <img style="margin-left:auto;width:15px;height: 15px;" src="../assets/delect.png" @click='onDelFileItem(item)' />
+          </div>
+          </div>
+        
+      </div>
       </div>
       <div class="fileRemark flex" style="width: 100%" v-if='receiveFileList.length>0'>
         <!-- background: #555ab2 -->
-        <div style="font-weight: bold;margin-left: 20px" :class="[isSendStatus?'SSCO':'RSCO']">添加文件</div>
+        <input type="file" multiple name="uploadFile" id="uploadFile" class="uploadFile"
+        style="visibility:hidden;position:absolute;top:0px;width:0px" @change="onFileListChange($event)" />
+        <div style="font-weight: bold;margin-left: 20px" :class="[isSendStatus?'SSCO':'RSCO']" @click='choseFile'>添加文件</div>
         <div style="margin-left:auto;margin-right: 20px" :class="[isSendStatus?'SSCO':'RSCO']">
-          1个文件,共158b
+          {{receiveFileList.length}}个文件,共{{filsListSize}}b
         </div>
       </div>
       <div style="width:100%" class="flex flexAC">
@@ -71,6 +81,7 @@
     setup() {
       const router = useRouter();
       const uid = ref(0); //记录图片的唯一性
+      const filsListSize = ref(0) //选取文件的大小
       const sendFileList = ref([]);
       const receiveFileList = ref([]);
       const isSendStatus = ref(true); //是否是发送端和接收端 true是发送端 false是接收端
@@ -84,6 +95,14 @@
           console.error(err.toString());
         }
       };
+      // 读取文件大小
+      const onReadFileListSize = () => {
+         let allSize = 0
+         for(let item of receiveFileList.value){
+            allSize = item.size + allSize
+         }
+         filsListSize.value = allSize
+      };
       // 文件读取是发生改变
       const onFileListChange = (e) => {
         for (let item of event.target.files) {
@@ -92,6 +111,7 @@
           receiveFileList.value.push(item)
           uid.value++
         }
+        onReadFileListSize()
         console.log(event.target.files, '文件对象')
         // receiveFileList.value.push(...event.target.files)
         console.log(receiveFileList.value,'文件数据')
@@ -127,6 +147,16 @@
       const changeType = () => {
         isSendStatus.value = !isSendStatus.value;
       };
+      // 删除文件
+      const onDelFileItem = (fileItem) => {
+          for(let index in receiveFileList.value){
+            if(fileItem.id == receiveFileList.value[index].id){
+              receiveFileList.value.splice(index,1)
+              onReadFileListSize()
+              return
+            }
+          }
+      };
       // 信令服务器交换信息
       const onSignalingMessage = (message) => {
         peer.signalingMessageCallback(message);
@@ -154,8 +184,10 @@
         isSendStatus,
         changeType,
         choseFile,
+        onDelFileItem,
         onFileListChange,
-        uid
+        uid,
+        filsListSize
       };
     },
   };
@@ -169,7 +201,9 @@
     display: flex;
     flex-direction: column
   }
-
+  .flexIC{
+    align-items: center
+  }
   .flexAC {
     align-items: center;
     justify-content: center
@@ -263,5 +297,12 @@
 
   .RSCO {
     color: #555ab2
+  }
+  .fileItemBox{
+    margin:5px 10px;
+    padding: 10px 5px;
+  }
+  .fileItemBox :hover{
+    background: #E2f6ff
   }
 </style>
