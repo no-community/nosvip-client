@@ -1,14 +1,14 @@
 <template>
   <!-- 框 -->
   <div class="flex flexAC" :class="[isSendStatus?'SSB':'RSB']" style="height:100vh">
-    <div class="allBox flex_column flexAC">
+    <div class="allBox flex_column">
       <!-- 状态控制器 -->
       <div class="statusBox flex_column">
         <div class='SSClass' @click='changeType()'>发送端</div>
         <div class='RSClass' @click='changeType()' style="margin-top:10px">接收端</div>
       </div>
       <!-- 文件显示框 -->
-      <div class="fileBox flex_column ">
+      <div class="fileBox flex flexAC">
         <div v-if='receiveFileList.length==0' class="flex_column flexAC">
           <input type="file" multiple name="uploadFile" id="uploadFile" class="uploadFile"
             style="visibility:hidden;position:absolute;top:0px;width:0px" @change="onFileListChange($event)" />
@@ -16,7 +16,7 @@
           <img src="../assets/uoload.png" @click='choseFile' style="width: 40%" />
           <span :class="[isSendStatus?'SSCO':'RSCO']">点击上方按钮进行上传</span>
         </div>
-        <div v-else class="flex_column flexAC">
+        <div v-else class="flex_column">
           <div v-for='(item,i) in receiveFileList'>{{item.name}}</div>
         </div>
       </div>
@@ -27,10 +27,11 @@
           1个文件,共158b
         </div>
       </div>
+      <div style="width:100%" class="flex flexAC">
       <div class="sendBtn" :class="[isSendStatus?'SSC':'RSC']">
         点击发送
       </div>
-
+    </div>
     </div>
   </div>
 
@@ -87,6 +88,7 @@
       const onFileListChange = (e) => {
         for (let item of event.target.files) {
           item.id = uid.value
+          item.status = 'noSub' // 定义一个status为刚选取文件没上传的状态
           receiveFileList.value.push(item)
           uid.value++
         }
