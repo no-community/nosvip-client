@@ -8,7 +8,7 @@
         <div class='RSClass' @click='changeType()' style="margin-top:10px">接收端</div>
       </div>
       <!-- 文件显示框 -->
-      <div class="fileBox flex_column flexAC">
+      <div class="fileBox flex_column ">
         <div v-if='receiveFileList.length==0' class="flex_column flexAC">
           <input type="file" multiple name="uploadFile" id="uploadFile" class="uploadFile"
             style="visibility:hidden;position:absolute;top:0px;width:0px" @change="onFileListChange($event)" />
@@ -138,7 +138,6 @@
       onMounted(async () => {
         await socket.start();
         $('.uploadFile').change(function (e) {
-          debugger
           var file = $('.uploadFile').val();
           console.log(file, '上传的文件')
         })
