@@ -75,6 +75,7 @@ export default {
     }
 
     onMounted( async () => {
+      await socket.start();
       await joinRoom(roomId.value);
       eventBus.on("onJoinedRoom", onJoinedRoom);
       eventBus.on("onSignalingMessage", onSignalingMessage);

@@ -5,10 +5,6 @@ const socket = new HubConnectionBuilder()
     .withUrl("http://localhost:5000/p2p")
     .build();
 
-if (socket.state != HubConnectionState.Connected) {
-    socket.start();
-}
-
 socket.on("created", function (roomId) {
     console.log("Created room", roomId);
     eventBus.emit("onCreatedRoom", roomId);
