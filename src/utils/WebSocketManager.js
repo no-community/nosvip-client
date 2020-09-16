@@ -18,7 +18,6 @@ socket.on("joined", function (roomId) {
 socket.on("message", function (message) {
     console.log("Client received message:", message);
     eventBus.emit("onSignalingMessage", message);
-    
 });
 
 export default socket

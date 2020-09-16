@@ -42,10 +42,10 @@ export default {
     };
 
     onMounted(async () => {
-      await socket.start();
-      peer.on("onChannelOpen", onChannelOpen);
       eventBus.on("onCreatedRoom", onCreatedRoom);
       eventBus.on("onSignalingMessage", onSignalingMessage);
+      peer.on("onChannelOpen", onChannelOpen);
+      await socket.start();
     });
 
     return { createRoom, isWaiting };

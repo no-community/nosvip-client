@@ -31,6 +31,7 @@ export default {
     };
 
     const onJoinedRoom = (roomId) => {
+      console.log("开始链接....")
       peer.connectPeer(roomId, true);
     };
 
@@ -75,10 +76,11 @@ export default {
     }
 
     onMounted( async () => {
-      await socket.start();
-      await joinRoom(roomId.value);
       eventBus.on("onJoinedRoom", onJoinedRoom);
       eventBus.on("onSignalingMessage", onSignalingMessage);
+      
+      await socket.start();
+      await joinRoom(roomId.value);
       peer.on("onReceiveMessage", onReceiveMessage);
     });
     return { roomId, sendMessage, joinRoom, message, tirggerFile };
