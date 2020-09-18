@@ -2,7 +2,7 @@ import { HubConnectionBuilder, HubConnectionState } from '@microsoft/signalr'
 import eventBus from './EventBus'
 
 const socket = new HubConnectionBuilder()
-    .withUrl("/p2p")
+    .withUrl("https://traefik.gridea.run/p2p")
     .build();
 
 socket.on("created", function (roomId) {
