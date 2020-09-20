@@ -55,9 +55,13 @@ export default {
     const selectedFiles = ref([]);
     const sendFileList = ref([]);
     const receiveFileList = ref([]);
-    const isSendStatus = ref(true); //是否是发送端和接收端 true是发送端 false是接收端
+    const isSendFile = ref(true); //是否是发送端和接收端 true是发送端 false是接收端
     const receivingFileId = ref(0);
     const receivingBuffer = ref([]);
+
+    const title = computed(() => {
+      return isSendFile.value ? "发送文件" : "接收文件";
+    });
 
     // 计算属性实时计算发送文件大小
     const sendFileTotalSize = computed(() => {
@@ -78,7 +82,7 @@ export default {
 
     // 切换状态
     const changeType = () => {
-      isSendStatus.value = !isSendStatus.value;
+      isSendFile.value = !isSendFile.value;
     };
 
     // 文件读取是发生改变
@@ -220,10 +224,11 @@ export default {
     });
 
     return {
+      title,
       sendFileList,
       sendFileTotalSize,
       receiveFileList,
-      isSendStatus,
+      isSendFile,
       changeType,
       onSelectFiles,
       onChoseFile,
