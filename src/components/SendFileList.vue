@@ -68,15 +68,15 @@ export default {
   position: relative;
   overflow: hidden;
   overflow-y: auto;
-  height: 349px;
+  height: 275px;
   margin-top: -1px;
   *z-index: 0;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .uploader-list .container {
   list-style: none;
-  color: #424e67;
+  color: #393e46;
   position: relative;
   overflow: hidden;
   margin: 0 8px;
@@ -90,14 +90,14 @@ export default {
   line-height: 49px;
 }
 .file-list:hover {
-    background: #f1f1f1;
+    background: #c9d6df;
 }
 .file-list .process {
   position: absolute;
   z-index: 0;
   height: 100%;
   *height: 49px;
-  background: #e2eeff;
+  background: #a8d8ea;
 }
 .file-list .info {
   display: flex;
@@ -132,5 +132,9 @@ export default {
   justify-content: flex-end;
   width: 150px;
   height: 49px;
+}
+.file-operate {
+  color: #667d99;
+  cursor: pointer;
 }
 </style>

@@ -1,5 +1,8 @@
 <style scoped>
 .add-box {
+    position: relative;
+    margin: 0 auto;
+    margin-top: 88px;
     width: 100px;
     height: 100px;
 }

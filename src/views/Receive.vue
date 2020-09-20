@@ -1,28 +1,18 @@
 <template>
-  <!-- 框 -->
-  <div class="flex flexAC" :class="[isSendStatus?'SSB':'RSB']" style="height:100vh">
-    <div class="allBox flex_column">
-      <!-- 状态控制器 -->
-      <div class="statusBox flex_column">
-        <div class="SSClass" :class="{ active: isSendStatus }" @click="changeType()">发送端</div>
-        <div
-          class="RSClass"
-          :class="{ active: !isSendStatus }"
-          @click="changeType()"
-          style="margin-top:10px"
-        >接收端</div>
+  <div class="container" :class="{send: isSendFile, receive: !isSendFile}">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">{{title}}</div>
+        <div class="card-action__switch" @click="changeType()">切换</div>
       </div>
-      <!-- 文件显示框 -->
-      <div class="fileBox flexAC" v-if="isSendStatus">
-        <div v-if="sendFileList.length==0" class="flex_column flexAC">
-          <EmptyFileList @onSelectFiles="onSelectFiles" />
-        </div>
-        <div v-else class="flex_column">
-          <SendFileList :files="sendFileList" @onRemoveFile="onRemoveFile" />
-        </div>
+      <div class="card-content" v-if="isSendFile">
+        <EmptyFileList v-if="sendFileList.length==0" @onSelectFiles="onSelectFiles" />
+        <SendFileList v-else :files="sendFileList" @onRemoveFile="onRemoveFile" />
       </div>
-      <div class="fileRemark flex" style="width: 100%" v-if="sendFileList.length>0 && isSendStatus">
-        <!-- background: #555ab2 -->
+      <div class="card-content" v-else>
+        <ReceiveFileList :files="receiveFileList" @onDownloadFile="onDownloadFile" />
+      </div>
+      <div class="card-footer" v-if="sendFileList.length > 0 && isSendFile">
         <input
           type="file"
           multiple
@@ -32,24 +22,9 @@
           style="visibility:hidden;position:absolute;top:0px;width:0px"
           @change="onSelectFiles($event.target.files)"
         />
-        <div
-          style="font-weight: bold;margin-left: 20px"
-          :class="[isSendStatus?'SSCO':'RSCO']"
-          @click="onChoseFile"
-        >添加文件</div>
-        <div
-          style="margin-left:auto;margin-right: 20px"
-          :class="[isSendStatus?'SSCO':'RSCO']"
-        >{{sendFileList.length}}个文件,共{{sendFileTotalSize}}</div>
+        <div class="card-action__add" @click="onChoseFile">添加文件</div>
+        <div class="card-text">{{sendFileList.length}} 个文件,共 {{sendFileTotalSize}}</div>
       </div>
-      <div class="fileBox flexAC" v-if="!isSendStatus">
-        <div class="flex_column">
-          <ReceiveFileList :files="receiveFileList" @onDownloadFile="onDownloadFile" />
-        </div>
-      </div>
-      <!-- <div style="width:100%" class="flex flexAC">
-        <div class="sendBtn" :class="[isSendStatus?'SSC':'RSC']">创建链接</div>
-      </div>-->
     </div>
   </div>
 </template>
@@ -82,9 +57,13 @@ export default {
     const selectedFiles = ref([]);
     const sendFileList = ref([]);
     const receiveFileList = ref([]);
-    const isSendStatus = ref(true);
+    const isSendFile = ref(true);
     const receivingFileId = ref(0);
     const receivingBuffer = ref([]);
+
+    const title = computed(() => {
+      return isSendFile.value ? "发送文件" : "接收文件";
+    });
 
     // 计算属性实时计算发送文件大小
     const sendFileTotalSize = computed(() => {
@@ -95,17 +74,17 @@ export default {
       return renderSize(totalSize);
     });
 
-    const receivingBufferSize = computed(()=> {
-      let totalSize =0;
-      for ( let item of receivingBuffer.value) {
-        totalSize+=item.byteLength;
+    const receivingBufferSize = computed(() => {
+      let totalSize = 0;
+      for (let item of receivingBuffer.value) {
+        totalSize += item.byteLength;
       }
       return totalSize;
-    })
+    });
 
     // 切换状态
     const changeType = () => {
-      isSendStatus.value = !isSendStatus.value;
+      isSendFile.value = !isSendFile.value;
     };
 
     // 文件读取是发生改变
@@ -132,7 +111,7 @@ export default {
       for (let index in sendFileList.value) {
         if (id == sendFileList.value[index].id) {
           sendFileList.value.splice(index, 1);
-          selectedFiles.value.splice(index,1);
+          selectedFiles.value.splice(index, 1);
           await sendFileChangeMessage("DeleteFile", { id: id });
         }
       }
@@ -148,7 +127,7 @@ export default {
 
     // 发送文件
     const sendFile = async (id) => {
-      let targetFile = selectedFiles.value.find((f)=>f.id==id);
+      let targetFile = selectedFiles.value.find((f) => f.id == id);
       let sendFile = sendFileList.value.find((f) => f.id == id);
       const chunker = new FileChunker(targetFile);
       await peer.sendJson({
@@ -180,8 +159,8 @@ export default {
             id: id,
           },
         });
-        
-        sendFile.precent = 100.00;
+
+        sendFile.precent = 100.0;
         sendFile.status = "success";
       }
     };
@@ -209,7 +188,7 @@ export default {
           (r) => r.id == message.payload.id
         );
         target.status = "success";
-        target.precent = 100.00;
+        target.precent = 100.0;
         const blob = new Blob(receivingBuffer.value);
 
         const link = document.createElement("a");
@@ -247,9 +226,14 @@ export default {
       if (typeof data == "string") {
         await handleMessage(data);
       } else {
-        let targetFile = receiveFileList.value.find(f=>f.id==receivingFileId.value);
+        let targetFile = receiveFileList.value.find(
+          (f) => f.id == receivingFileId.value
+        );
         receivingBuffer.value.push(data);
-        targetFile.precent = ((receivingBufferSize.value/targetFile.size) *100).toFixed(2);
+        targetFile.precent = (
+          (receivingBufferSize.value / targetFile.size) *
+          100
+        ).toFixed(2);
       }
     };
 
@@ -263,134 +247,72 @@ export default {
     });
 
     return {
-      roomId,
+      title,
       sendFileList,
       sendFileTotalSize,
       receiveFileList,
-      isSendStatus,
+      isSendFile,
       changeType,
       onSelectFiles,
       onChoseFile,
       onRemoveFile,
-      onDownloadFile
+      onDownloadFile,
     };
   },
 };
 </script>
 <style scoped>
-.flex {
+.container {
+  height: 100vh;
   display: flex;
-}
-
-.flex_column {
-  display: flex;
-  flex-direction: column;
-}
-.flexIC {
-  align-items: center;
-}
-.flexAC {
-  align-items: center;
   justify-content: center;
+  align-items: center;
+} 
+.send {
+  background-color: #9896f1;
 }
-
-.choseFileBtn {
-  /* border: 1px solid #d9d9d9; */
-  width: 30%;
-  margin: 30px 0;
+.receive {
+  background-color: #d59bf6;
+}
+.card {
+  width: 380px;
+  box-shadow: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
+  transition: box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 4px;
-  background: #52d4d3;
-  /* background: linear-gradient(#bddee1, #f0fcfd); */
+  margin: 0px auto;
+  padding: 16px;
+  background:#fff;
 }
-
-.choseFileBtn img {
-  width: 40px;
-  height: 40rpx;
-}
-
-.allBox {
-  width: 30%;
+.card-header {
   position: relative;
-  background: white;
 }
-
-.fileBox {
-  margin: 40px 20px 20px 20px;
-  min-height: 400px;
+.card-title {
+  text-align: center;
+  font-weight: 700;
+  color: #111;
+}
+.card-action__switch {
+  position: absolute;
+  top: 0;
+  right: 0;
+  cursor: pointer;
+  color: #667d99;
+}
+.card-action__add {
+  cursor: pointer;
+  color: #667d99;
+}
+.card-content {
+  min-height: 275px;
+  margin: 16px 0;
   border: 2px dashed #d1d1d1;
 }
-
-.sendBtn {
-  height: 40px;
-  width: 400px;
-  border-radius: 20px;
-  line-height: 40px;
-  text-align: center;
-  color: white;
-  /* background: #555ab2; */
-  /* background: #3fcfce; */
-  margin: 20px;
+.card-footer {
+  display: flex;
+  justify-content: space-between;
 }
-
-.statusBox {
-  position: absolute;
-
-  top: 10px;
-  right: -100px;
-}
-
-.SSClass {
-  width: 60px;
-  height: 30px;
-  line-height: 30px;
-  text-align: center;
-  background: #3fcfce;
-  border-radius: 0px 15px 15px 0;
-  color: white;
-}
-
-.SSB {
-  background: linear-gradient(#bddee1, #f0fcfd);
-}
-
-.SSC {
-  background: #52d4d3;
-}
-
-.SSCO {
-  color: #52d4d3;
-}
-
-.RSClass {
-  width: 60px;
-  height: 30px;
-  line-height: 30px;
-  text-align: center;
-  background: #555ab2;
-  border-radius: 0px 15px 15px 0;
-  color: white;
-}
-
-.active {
-  width: 100px !important;
-}
-
-.RSB {
-  background: linear-gradient(#555ab2, #a690ff);
-}
-
-.RSC {
-  background: #555ab2;
-}
-
-.RSCO {
-  color: #555ab2;
-}
-.fileItemBox {
-  margin: 5px 10px;
-  padding: 10px 5px;
-}
-.fileItemBox :hover {
-  background: #e2f6ff;
+.card-text {
+  font-size: 14px;
+  color: #c9d6df;
 }
 </style>
