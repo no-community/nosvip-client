@@ -4,41 +4,24 @@
     <div class="allBox flex_column">
       <!-- 状态控制器 -->
       <div class="statusBox flex_column">
-        <div class="SSClass" @click="changeType()">发送端</div>
-        <div class="RSClass" @click="changeType()" style="margin-top:10px">接收端</div>
+        <div class="SSClass" :class="{ active: isSendStatus }" @click="changeType()">发送端</div>
+        <div
+          class="RSClass"
+          :class="{ active: !isSendStatus }"
+          @click="changeType()"
+          style="margin-top:10px"
+        >接收端</div>
       </div>
       <!-- 文件显示框 -->
-      <div class="fileBox flex flexAC">
+      <div class="fileBox flexAC" v-if="isSendStatus">
         <div v-if="sendFileList.length==0" class="flex_column flexAC">
-          <input
-            type="file"
-            multiple
-            name="uploadFile"
-            id="uploadFile"
-            class="uploadFile"
-            style="visibility:hidden;position:absolute;top:0px;width:0px"
-            @change="onFileListChange($event)"
-          />
-          <!-- <div @click='choseFile' class="choseFileBtn">上传文件</div> -->
-          <img src="../assets/uoload.png" @click="choseFile" style="width: 40%" />
-          <span :class="[isSendStatus?'SSCO':'RSCO']">点击上方按钮进行上传</span>
+          <EmptyFileList @onSelectFiles="onSelectFiles" />
         </div>
-
-        <div v-else class="flex_column" style="width: 100%">
-          <div v-for="(item,i) in sendFileList" class="fileItemBox">
-            <div class="flex flexIC" style="padding:5px 0">
-              <img src="../assets/file.png" style="width:15px;" />
-              <text style="margin-left:5px;color:#1890ff">{{item.name}}</text>
-              <img
-                style="margin-left:auto;width:15px;height: 15px;"
-                src="../assets/delect.png"
-                @click="onDelFileItem(item)"
-              />
-            </div>
-          </div>
+        <div v-else class="flex_column">
+          <SendFileList :files="sendFileList" @onRemoveFile="onRemoveFile" />
         </div>
       </div>
-      <div class="fileRemark flex" style="width: 100%" v-if="sendFileList.length>0">
+      <div class="fileRemark flex" style="width: 100%" v-if="sendFileList.length>0 && isSendStatus">
         <!-- background: #555ab2 -->
         <input
           type="file"
@@ -47,18 +30,26 @@
           id="uploadFile"
           class="uploadFile"
           style="visibility:hidden;position:absolute;top:0px;width:0px"
-          @change="onFileListChange($event)"
+          @change="onSelectFiles($event.target.files)"
         />
         <div
           style="font-weight: bold;margin-left: 20px"
           :class="[isSendStatus?'SSCO':'RSCO']"
-          @click="choseFile"
+          @click="onChoseFile"
         >添加文件</div>
         <div
           style="margin-left:auto;margin-right: 20px"
           :class="[isSendStatus?'SSCO':'RSCO']"
-        >{{sendFileList.length}}个文件,共{{filsListSize}}b</div>
+        >{{sendFileList.length}}个文件,共{{sendFileTotalSize}}</div>
       </div>
+      <div class="fileBox flexAC" v-if="!isSendStatus">
+        <div class="flex_column">
+          <ReceiveFileList :files="receiveFileList" @onDownloadFile="onDownloadFile" />
+        </div>
+      </div>
+      <!-- <div style="width:100%" class="flex flexAC">
+        <div class="sendBtn" :class="[isSendStatus?'SSC':'RSC']">创建链接</div>
+      </div>-->
     </div>
   </div>
 </template>
@@ -69,21 +60,171 @@ import { useRoute } from "vue-router";
 import socket from "../utils/WebSocketManager";
 import eventBus from "../utils/EventBus";
 import peer from "../utils/Peer";
-import FileChunker  from "../utils/FileChunker";
-import $ from "jquery";
+import FileChunker from "../utils/FileChunker";
+import TransferFile from "../utils/TransferFile";
+import renderSize from "../utils/FormatBytes";
+import EmptyFileList from "../components/EmptyFileList.vue";
+import SendFileList from "../components/SendFileList.vue";
+import ReceiveFileList from "../components/ReceiveFileList.vue";
 
 export default {
+  components: {
+    EmptyFileList,
+    SendFileList,
+    ReceiveFileList,
+  },
+  emits: ["onSelectFiles", "onRemoveFile", "onDownloadFile"],
   setup() {
     const route = useRoute();
     const roomId = computed(() => route.params.rid);
 
     const uid = ref(1);
-    const filsListSize = ref(0);
+    const selectedFiles = ref([]);
     const sendFileList = ref([]);
     const receiveFileList = ref([]);
     const isSendStatus = ref(true);
     const receivingFileId = ref(0);
     const receivingBuffer = ref([]);
+
+    // 计算属性实时计算发送文件大小
+    const sendFileTotalSize = computed(() => {
+      let totalSize = 0;
+      for (let item of sendFileList.value) {
+        totalSize = item.size + totalSize;
+      }
+      return renderSize(totalSize);
+    });
+
+    const receivingBufferSize = computed(()=> {
+      let totalSize =0;
+      for ( let item of receivingBuffer.value) {
+        totalSize+=item.byteLength;
+      }
+      return totalSize;
+    })
+
+    // 切换状态
+    const changeType = () => {
+      isSendStatus.value = !isSendStatus.value;
+    };
+
+    // 文件读取是发生改变
+    const onSelectFiles = async (files) => {
+      for (let item of files) {
+        item.id = uid.value;
+        item.precent = 0;
+        item.status = "prepare";
+        uid.value++;
+        const transferFile = new TransferFile(item);
+        selectedFiles.value.push(item);
+        sendFileList.value.push(transferFile);
+        await sendFileChangeMessage("AddFile", transferFile);
+      }
+    };
+
+    // 打开文件选择
+    const onChoseFile = () => {
+      document.getElementById("uploadFile").click();
+    };
+
+    // 移除文件
+    const onRemoveFile = async (id) => {
+      for (let index in sendFileList.value) {
+        if (id == sendFileList.value[index].id) {
+          sendFileList.value.splice(index, 1);
+          selectedFiles.value.splice(index,1);
+          await sendFileChangeMessage("DeleteFile", { id: id });
+        }
+      }
+    };
+
+    // 文件下载
+    const onDownloadFile = async (id) => {
+      await peer.sendJson({
+        type: "DownloadFile",
+        payload: { id: id },
+      });
+    };
+
+    // 发送文件
+    const sendFile = async (id) => {
+      let targetFile = selectedFiles.value.find((f)=>f.id==id);
+      let sendFile = sendFileList.value.find((f) => f.id == id);
+      const chunker = new FileChunker(targetFile);
+      await peer.sendJson({
+        type: "TransferFileStart",
+        payload: {
+          id: id,
+        },
+      });
+      sendFile.status = "transfering";
+
+      let done = false;
+      while (!done) {
+        const result = await chunker.getNextChunk();
+        done = result.done;
+        const { chunk, offset } = result;
+        try {
+          await peer.send(chunk);
+          sendFile.precent = ((offset / sendFile.size) * 100).toFixed(2);
+        } catch (err) {
+          console.log("传输错误：" + err);
+          break;
+        }
+      }
+
+      if (done) {
+        await peer.sendJson({
+          type: "TransferFileEnd",
+          payload: {
+            id: id,
+          },
+        });
+        
+        sendFile.precent = 100.00;
+        sendFile.status = "success";
+      }
+    };
+
+    // 发送文件变化消息
+    const sendFileChangeMessage = async (type, payload) => {
+      await peer.sendJson({
+        type: type,
+        payload: payload,
+      });
+    };
+
+    const handleMessage = async (msgText) => {
+      const message = JSON.parse(msgText);
+      if (message.type === "TransferFileStart") {
+        let target = receiveFileList.value.find(
+          (r) => r.id == message.payload.id
+        );
+        receivingFileId.value = message.payload.id;
+        target.status = "transfering";
+      } else if (message.type == "DownloadFile") {
+        await sendFile(message.payload.id);
+      } else if (message.type === "TransferFileEnd") {
+        let target = receiveFileList.value.find(
+          (r) => r.id == message.payload.id
+        );
+        target.status = "success";
+        target.precent = 100.00;
+        const blob = new Blob(receivingBuffer.value);
+
+        const link = document.createElement("a");
+        link.href = window.URL.createObjectURL(blob);
+        link.download = target.name;
+        link.click();
+        window.URL.revokeObjectURL(link.href);
+      } else if (message.type === "AddFile") {
+        receiveFileList.value.push(message.payload);
+      } else if (message.type === "DeleteFile") {
+        receiveFileList.value = receiveFileList.value.filter(
+          (r) => r.id != message.payload.id
+        );
+      }
+    };
 
     const joinRoom = async (roomId) => {
       try {
@@ -102,110 +243,14 @@ export default {
       peer.signalingMessageCallback(message);
     };
 
-    // 发送文件
-    const sendFile = async (id) => {
-      const chunker = new FileChunker(sendFileList.value.find(f=>f.id==id));
-      console.log("开始传输文件...");
-      await peer.sendJson({
-        type: "TransferFileStart",
-        payload: {
-          id: id
-        }
-      });
-      let done = false;
-      while (!done) {
-        const result = await chunker.getNextChunk();
-        done = result.done;
-        const { chunk, offset } = result;
-        try {
-          await peer.send(chunk);
-        } catch (err) {
-          console.log("传输错误：" + err);
-          break;
-        }
-      }
-
-      console.log("传输文件完成...");
-      if (done) {
-        await peer.sendJson({
-          type: "TransferFileEnd",
-          payload: {
-            id: id
-          }
-        });
-      }
-    };
-
-    // 发送文件变化消息
-    const sendFileChangeMessage = async (type, payload) => {
-      await peer.sendJson({
-        type: type,
-        payload: payload,
-      });
-    };
-
-    // 读取文件大小
-    const onReadFileListSize = () => {
-      let allSize = 0;
-      for (let item of sendFileList.value) {
-        allSize = item.size + allSize;
-      }
-      filsListSize.value = allSize;
-    };
-
-    // 文件读取是发生改变
-    const onFileListChange = (e) => {
-      for (let item of event.target.files) {
-        item.id = uid.value;
-        item.status = "ready";
-        sendFileList.value.push(item);
-        uid.value++;
-      }
-      sendFileChangeMessage("AddFile", {
-        id: e.target.files[0].id,
-        status: e.target.files[0].status,
-        name: e.target.files[0].name,
-        size: e.target.files[0].size,
-      });
-      onReadFileListSize();
-    };
-
     const onReceiveMessage = async (data) => {
       if (typeof data == "string") {
-        console.log("接收到文本消息：", data);
         await handleMessage(data);
       } else {
-        console.log("接收到流数据:", data);
+        let targetFile = receiveFileList.value.find(f=>f.id==receivingFileId.value);
         receivingBuffer.value.push(data);
+        targetFile.precent = ((receivingBufferSize.value/targetFile.size) *100).toFixed(2);
       }
-    };
-
-    const choseFile = () => {
-      $(".uploadFile").click();
-    };
-
-    const handleMessage = async (msgText) => {
-      const message = JSON.parse(msgText);
-      if (message.type === "DownloadFile") {
-        await sendFile(message.payload.id);
-      }
-    };
-
-    // 切换状态
-    const changeType = () => {
-      isSendStatus.value = !isSendStatus.value;
-    };
-
-    // 删除文件
-    const onDelFileItem = (file) => {
-      sendFileList.value = sendFileList.value.filter((f) => f.id != file.id);
-      sendFileChangeMessage("DeleteFile", {
-        id: file.id,
-        status: file.status,
-        name: file.name,
-        size: file.size,
-      });
-      onReadFileListSize();
     };
 
     onMounted(async () => {
@@ -214,24 +259,20 @@ export default {
       eventBus.on("onSignalingMessage", onSignalingMessage);
       await joinRoom(roomId.value);
 
-      $(".uploadFile").change(function (e) {
-        var file = $(".uploadFile").val();
-        console.log(file, "上传的文件");
-      });
-
       peer.on("onReceiveMessage", onReceiveMessage);
     });
 
     return {
       roomId,
       sendFileList,
+      sendFileTotalSize,
+      receiveFileList,
       isSendStatus,
       changeType,
-      choseFile,
-      onDelFileItem,
-      onFileListChange,
-      uid,
-      filsListSize,
+      onSelectFiles,
+      onChoseFile,
+      onRemoveFile,
+      onDownloadFile
     };
   },
 };
@@ -299,7 +340,7 @@ export default {
 }
 
 .SSClass {
-  width: 100px;
+  width: 60px;
   height: 30px;
   line-height: 30px;
   text-align: center;
@@ -328,6 +369,10 @@ export default {
   background: #555ab2;
   border-radius: 0px 15px 15px 0;
   color: white;
+}
+
+.active {
+  width: 100px !important;
 }
 
 .RSB {
