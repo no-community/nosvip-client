@@ -244,6 +244,7 @@ export default {
         eventBus.on("onJoinedRoom", onJoinedRoom);
         eventBus.on("onSignalingMessage", onSignalingMessage);
         await joinRoom(roomId.value);
+        isSendFile.value = false;
       }
       
       peer.on("onReceiveMessage", onReceiveMessage);
