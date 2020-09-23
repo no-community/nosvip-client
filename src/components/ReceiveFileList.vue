@@ -5,7 +5,7 @@ import renderSize from "../utils/FormatBytes";
 export default {
   props: ["files"],
   setup(props, { emit }) {
-    const showActions = ref(false);
+    const isPending = ref(false);
     const fmtFiles = computed(() => {
       for (let i = 0; i < props.files.length; i++) {
         props.files[i].fmtSize = renderSize(props.files[i].size);
@@ -13,21 +13,11 @@ export default {
       return props.files;
     });
 
-    const onMouseEnter = (id) => {
-      let file = props.files.find(i=>i.id==id);
-      file.showActions=true;
-    };
-
-    const onMouseLeave = (id) => {
-      let file = props.files.find(i=>i.id==id);
-      file.showActions=false;
-    };
-
     const onDownloadFile = (id) => {
       emit("onDownloadFile", id);
     };
 
-    return { fmtFiles, onDownloadFile, showActions, onMouseEnter, onMouseLeave };
+    return { fmtFiles, onDownloadFile };
   },
 };
 </script>
@@ -38,16 +28,14 @@ export default {
         v-for="file in fmtFiles "
         :key="file.id"
         class="file-list"
-        @mouseenter="onMouseEnter(file.id)"
-        @mouseleave="onMouseLeave(file.id)"
       >
         <div class="process" :style="{ width: file.precent + '%' }"></div>
         <div class="info">
           <div class="file-name" :title="file.name">
             <span class="name-text">{{file.name}}</span>
           </div>
-          <div class="file-status" v-if="!file.showActions">
-            <span class="prepare" v-if="file.status==='prepare'">等待传输…</span>
+          <div class="file-status">
+            <span class="prepare" v-if="file.status==='prepare'">等待传输</span>
             <span class="transfering" v-if="file.status==='transfering'">
               <em class="precent">{{file.precent}}%</em>
             </span>
@@ -56,8 +44,8 @@ export default {
             <span class="cancel" v-if="file.status==='cancel'">已取消</span>
             <span class="success" v-if="file.status==='success'">传输成功</span>
           </div>
-          <div class="file-size" v-if="!file.showActions">{{file.fmtSize}}</div>
-          <div class="file-operate" v-if="file.showActions">
+          <div class="file-size">{{file.fmtSize}}</div>
+          <div class="file-operate" v-if="file.status==='prepare'">
             <span class="operate-remove" @click="onDownloadFile(file.id)">下载</span>
           </div>
         </div>

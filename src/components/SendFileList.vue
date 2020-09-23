@@ -13,21 +13,11 @@ export default {
       return props.files;
     });
 
-    const onMouseEnter = (id) => {
-      let file = props.files.find(i=>i.id==id);
-      file.showActions=true;
-    };
-
-    const onMouseLeave = (id) => {
-      let file = props.files.find(i=>i.id==id);
-      file.showActions=false;
-    };
-
     const removeFile = (id) => {
       emit("onRemoveFile", id);
     };
 
-    return { fmtFiles, removeFile, showActions, onMouseEnter, onMouseLeave };
+    return { fmtFiles, removeFile };
   },
 };
 </script>
@@ -46,8 +36,8 @@ export default {
           <div class="file-name" :title="file.name">
             <span class="name-text">{{file.name}}</span>
           </div>
-          <div class="file-status" v-if="!file.showActions">
-            <span class="prepare" v-if="file.status==='prepare'">等待传输…</span>
+          <div class="file-status">
+            <span class="prepare" v-if="file.status==='prepare'">等待传输</span>
             <span class="transfering" v-if="file.status==='transfering'">
               <em class="precent">{{file.precent}}%</em>
             </span>
@@ -56,8 +46,8 @@ export default {
             <span class="cancel" v-if="file.status==='cancel'">已取消</span>
             <span class="success" v-if="file.status==='success'">传输成功</span>
           </div>
-          <div class="file-size" v-if="!file.showActions">{{file.fmtSize}}</div>
-          <div class="file-operate" v-if="file.showActions">
+          <div class="file-size">{{file.fmtSize}}</div>
+          <div class="file-operate" v-if="file.status==='prepare'">
             <span class="operate-remove" @click="removeFile(file.id)">删除</span>
           </div>
         </div>
@@ -110,8 +100,6 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   position: relative;
-  float: left;
-  width: 200px;
   height: 49px;
 }
 .file-name {
@@ -132,7 +120,6 @@ export default {
 .file-size {
   display: flex;
   justify-content: flex-end;
-  width: 150px;
   height: 49px;
 }
 .file-operate {

@@ -31,7 +31,7 @@
 
 <script>
 import { computed, onMounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import socket from "../utils/WebSocketManager";
 import eventBus from "../utils/EventBus";
 import peer from "../utils/Peer";
@@ -50,12 +50,13 @@ export default {
   },
   emits: ["onSelectFiles", "onRemoveFile", "onDownloadFile"],
   setup() {
-    const router = useRouter();
-    const uid = ref(1); //记录图片的唯一性
+    const route = useRoute();
+    const uid = ref(1);
+    const roomId = ref(route.params.rid);
     const selectedFiles = ref([]);
     const sendFileList = ref([]);
     const receiveFileList = ref([]);
-    const isSendFile = ref(true); //是否是发送端和接收端 true是发送端 false是接收端
+    const isSendFile = ref(true);
     const receivingFileId = ref(0);
     const receivingBuffer = ref([]);
 
@@ -72,6 +73,7 @@ export default {
       return renderSize(totalSize);
     });
 
+    // 接收文件流大小计算
     const receivingBufferSize = computed(() => {
       let totalSize = 0;
       for (let item of receivingBuffer.value) {
@@ -172,6 +174,23 @@ export default {
       });
     };
 
+    const joinRoom = async (roomId) => {
+      try {
+        await socket.invoke("JoinRoom", roomId);
+      } catch (error) {
+        console.error(error.toString());
+      }
+    };
+
+    const onJoinedRoom = (roomId) => {
+      console.log("开始链接....");
+      peer.connectPeer(roomId, true);
+    };
+
+    const onSignalingMessage = (message) => {
+      peer.signalingMessageCallback(message);
+    };
+
     const onReceiveMessage = (data) => {
       if (typeof data == "string") {
         handleMessage(data);
@@ -220,6 +239,13 @@ export default {
     };
 
     onMounted(async () => {
+      if(route.params.mode==='join') {
+        await socket.start();
+        eventBus.on("onJoinedRoom", onJoinedRoom);
+        eventBus.on("onSignalingMessage", onSignalingMessage);
+        await joinRoom(roomId.value);
+      }
+      
       peer.on("onReceiveMessage", onReceiveMessage);
     });
 

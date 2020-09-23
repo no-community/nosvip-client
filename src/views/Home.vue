@@ -4,10 +4,12 @@
       <button
         :class="{ 'red-btn': !isWaiting, 'green-btn': isWaiting }"
         @click="createRoom"
-      >{{title}}</button>
+      >
+        {{ title }}
+      </button>
       <div class="templink" v-if="isWaiting">
         <div class="tips">
-          <p>{{tips}}</p>
+          <p>{{ tips }}</p>
         </div>
         <div class="urls">
           <div class="long-link">
@@ -53,7 +55,7 @@ export default {
     const onChannelOpen = () => {
       title.value = "连接成功...";
       isWaiting.value = false;
-      router.push(`/s/${roomId.value}`);
+      router.push(`/r/${roomId.value}`);
     };
 
     // 信令服务器交换信息
@@ -63,11 +65,17 @@ export default {
 
     // 房间创建成功后 打开数据通道 等待连接
     const onCreatedRoom = (rid) => {
-      console
+      console;
       roomId.value = rid;
       isWaiting.value = true;
       title.value = "等待连接...";
-      templink.value = window.location.protocol+"//"+ window.location.host + "/#/r/" + rid;
+      templink.value =
+        window.location.protocol +
+        "//" +
+        window.location.host +
+        "/#/r/" +
+        rid +
+        "/join";
       peer.connectPeer(rid, false);
     };
 

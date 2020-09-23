@@ -10,12 +10,8 @@ const router = createRouter({
             component: () => import("../views/Home.vue")
         },
         {
-            path: '/s/:rid',
-            component: () => import("../views/Send.vue")
-        },
-        {
-            path: '/r/:rid',
-            component: () => import('../views/Receive.vue'),
+            path: '/r/:rid/:mode?',
+            component: () => import('../views/Send.vue')
         }
     ]
 })
